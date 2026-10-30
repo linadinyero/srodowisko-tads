@@ -61,7 +61,7 @@ def zbierz_sprawdzenia():
 
 def main():
     print(f"System: {platform.system()} {platform.release()}")
-    print("Srodowisko Python jest gotowe")
+    print("Raport: srodowisko gotowe")
     print("-" * 66)
 
     sprawdzenia = zbierz_sprawdzenia()
@@ -80,4 +80,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-    
