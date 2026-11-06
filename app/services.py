@@ -1,4 +1,7 @@
+
 import csv
+
+_RAPORTY = []
 
 
 def wczytaj_zamowienia(sciezka):
@@ -17,19 +20,17 @@ def policz_wskazniki(sciezka, region=None):
 
     if region is not None:
         zamowienia = [
-            zamowienie
-            for zamowienie in zamowienia
+            zamowienie for zamowienie in zamowienia
             if zamowienie["region"] == region
         ]
 
-    przychod = sum(float(zamowienie["przychod"]) for zamowienie in zamowienia)
-    koszt = sum(float(zamowienie["koszt"]) for zamowienie in zamowienia)
+    przychod = sum(float(z["przychod"]) for z in zamowienia)
+    koszt = sum(float(z["koszt"]) for z in zamowienia)
     liczba_zamowien = len(zamowienia)
 
-    if przychod == 0:
-        marza = 0.0
-    else:
-        marza = round((przychod - koszt) / przychod, 4)
+    marza = 0.0 if przychod == 0 else round(
+        (przychod - koszt) / przychod, 4
+    )
 
     return {
         "region": region,
@@ -38,3 +39,16 @@ def policz_wskazniki(sciezka, region=None):
         "koszt": koszt,
         "marza": marza,
     }
+
+
+def zapisz_raport(rok, region):
+    raport = {"rok": rok, "region": region}
+    _RAPORTY.append(raport)
+    return raport
+
+
+def raporty_roku(rok):
+    return [
+        raport for raport in _RAPORTY
+        if raport["rok"] == rok
+    ]
