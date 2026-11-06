@@ -1,19 +1,30 @@
 import logging
 import time
+from datetime import date
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 from werkzeug.exceptions import HTTPException
 
 from .config import KONFIGURACJE
 from .converters import RegionConverter
+from .filters import zarejestruj_filtry
+from .services import dostepne_regiony
 
 
 def create_app(nazwa_konfiguracji="rozwojowa"):
     app = Flask(__name__)
     app.config.from_object(KONFIGURACJE[nazwa_konfiguracji])
     app.logger.setLevel(logging.INFO)
-
     app.url_map.converters["region"] = RegionConverter
+
+    zarejestruj_filtry(app)
+
+    @app.context_processor
+    def dane_wspolne():
+        return {
+            "regiony": dostepne_regiony(app.config["SCIEZKA_DANYCH"]),
+            "rok_biezacy": date.today().year,
+        }
 
     @app.before_request
     def rozpocznij_pomiar():
@@ -25,7 +36,6 @@ def create_app(nazwa_konfiguracji="rozwojowa"):
         odpowiedz.headers["X-Czas-Ms"] = f"{czas:.2f}"
         return odpowiedz
 
-
     @app.errorhandler(HTTPException)
     def obsluz_blad(blad):
         if blad.code == 308:
@@ -34,15 +44,16 @@ def create_app(nazwa_konfiguracji="rozwojowa"):
         if request.path.startswith("/api/"):
             odpowiedz = jsonify({
                 "blad": blad.description,
-                "kod": blad.code,
+                "kod": blad.code
             })
             odpowiedz.status_code = blad.code
             return odpowiedz
 
-        return (
-            f"<h1>{blad.code}</h1><p>Wystąpił błąd żądania.</p>",
-            blad.code,
-        )
+        return render_template(
+            "errors/error.html",
+            kod=blad.code,
+            opis=blad.description
+        ), blad.code
 
     from .routes_api import api_bp
     from .routes_panel import panel_bp

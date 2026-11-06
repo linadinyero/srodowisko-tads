@@ -1,0 +1,43 @@
+
+{% extends "base.html" %}
+{% from "macros.html" import kafelek, ocena %}
+
+{% block tytul %}Wskaźniki: {{ wskazniki.region }}{% endblock %}
+
+{% block tresc %}
+<h1>Wskaźniki: {{ wskazniki.region }}</h1>
+
+<p>Stan na dzień {{ dzisiaj | data_pl }}. Regiony w zbiorze: {{ regiony | length }} ({{ regiony | join(", ") }}).</p>
+
+<div class="kafelki">
+    {{ kafelek("Przychody", wskazniki.przychod | zl) }}
+    {{ kafelek("Koszty", wskazniki.koszt | zl) }}
+    {{ kafelek("Marża", wskazniki.marza | procent) }}
+    {{ kafelek("Liczba zamówień", wskazniki.liczba_zamowien | liczba) }}
+</div>
+
+<h2>Porównanie regionów</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Region</th>
+            <th>Przychody</th>
+            <th>Koszty</th>
+            <th>Marża</th>
+            <th>Ocena</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for w in zestawienie %}
+        <tr>
+            <td>{{ w.region }}</td>
+            <td>{{ w.przychod | zl }}</td>
+            <td>{{ w.koszt | zl }}</td>
+            <td>{{ w.marza | procent }}</td>
+            <td>{{ ocena(w.marza) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
