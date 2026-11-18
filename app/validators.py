@@ -7,5 +7,6 @@ def parametr_int(wartosc, nazwa="rok"):
     try:
         return int(wartosc)
     except (TypeError, ValueError):
-        raise ValueError(f"Parametr {nazwa} musi być liczbą całkowitą")
-
+        raise ValueError(
+            f"Parametr {nazwa} musi być liczbą całkowitą"
+        )
