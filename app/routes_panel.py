@@ -11,13 +11,17 @@ from flask import (
     request,
     url_for,
 )
+from werkzeug.utils import secure_filename
 
+from .forms import FiltrForm, RaportForm, ZbiorForm
 from .services import (
     dostepne_regiony,
     policz_wskazniki,
     raporty_roku,
     zapisz_raport,
     zestawienie_regionow,
+    wykaz_raportow,
+    wczytaj_zbior,
 )
 from .validators import parametr_int
 
@@ -33,14 +37,27 @@ def index():
 
 @panel_bp.get("/kpi")
 def kpi():
-    region = request.args.get("region")
     sciezka = current_app.config["SCIEZKA_DANYCH"]
     regiony = dostepne_regiony(sciezka)
 
-    if region is not None and region not in regiony:
-        abort(404, description=f"Nieznany region: {region}")
+    formularz = FiltrForm(request.args)
+    formularz.region.choices = [("", "wszystkie")] + [
+        (region, region) for region in regiony
+    ]
 
-    wskazniki = policz_wskazniki(sciezka, region)
+    region = None
+    rok = None
+
+    if formularz.validate():
+        region = formularz.region.data or None
+        rok = formularz.rok.data
+    elif request.args:
+        flash(
+            "Kryteria zawężenia zostały pominięte",
+            "ostrzezenie",
+        )
+
+    wskazniki = policz_wskazniki(sciezka, region, rok)
 
     current_app.logger.info(
         "Obliczono wskaźniki dla regionu %s",
@@ -52,6 +69,7 @@ def kpi():
         wskazniki=wskazniki,
         zestawienie=zestawienie_regionow(sciezka),
         dzisiaj=date.today(),
+        formularz=formularz,
     )
 
 
@@ -83,43 +101,70 @@ def raport(rok):
     )
 
 
-
 @panel_bp.route("/raporty/nowy", methods=["GET", "POST"])
 def nowy_raport():
-    if request.method == "GET":
-        return """
-        <form method="post">
-            <label>Rok:
-                <input name="rok" type="text">
-            </label>
-            <label>Region:
-                <input name="region" type="text">
-            </label>
-            <button type="submit">Zapisz raport</button>
-        </form>
-        """
+    sciezka = current_app.config["SCIEZKA_DANYCH"]
+    regiony = dostepne_regiony(sciezka)
 
-    try:
-        rok = parametr_int(request.form.get("rok"), "rok")
-    except (ValueError, TypeError):
-        abort(400, description="Nieprawidłowy rok")
+    istniejace = [
+        (raport["rok"], raport["region"])
+        for raport in wykaz_raportow()
+    ]
 
-    region = request.form.get("region", "").strip()
-    regiony = dostepne_regiony(current_app.config["SCIEZKA_DANYCH"])
+    formularz = RaportForm(istniejace=istniejace)
+    formularz.region.choices = [
+        ("", "Wybierz region")
+    ] + [(region, region) for region in regiony]
 
-    if region not in regiony:
-        abort(400, description=f"Nieznany region: {region}")
+    if formularz.validate_on_submit():
+        rok = formularz.rok.data
+        region = formularz.region.data
+        uwagi = formularz.uwagi.data or ""
 
-    if not 2020 <= rok <= 2030:
-        abort(422, description="Rok musi być z zakresu 2020–2030")
+        zapisz_raport(rok, region, uwagi)
+        flash(f"Raport za rok {rok} zapisany", "success")
 
-    zapisz_raport(rok, region)
-    flash(f"Raport za rok {rok} został zapisany", "sukces")
+        return redirect(
+            url_for("panel.raport", rok=rok),
+            code=303,
+        )
 
-    return redirect(
-        url_for("panel.raport", rok=rok),
-        code=303,
-    )
+    status = 422 if formularz.errors else 200
+
+    return render_template(
+        "new_report.html",
+        formularz=formularz,
+    ), status
+
+
+@panel_bp.route("/wczytaj", methods=["GET", "POST"])
+def wczytaj():
+    formularz = ZbiorForm()
+
+    if formularz.validate_on_submit():
+        plik = formularz.plik.data
+        nazwa = secure_filename(plik.filename)
+
+        try:
+            liczba = wczytaj_zbior(plik.stream)
+        except ValueError as blad:
+            formularz.plik.errors.append(
+                f"Niepoprawna zawartość: {blad}"
+            )
+        else:
+            flash(
+                f"Wczytano {liczba} zamówień z pliku {nazwa}",
+                "success",
+            )
+            return redirect(url_for("panel.wczytaj"), 303)
+
+    status = 422 if formularz.errors else 200
+
+    return render_template(
+        "upload.html",
+        formularz=formularz,
+    ), status
+
 
 @panel_bp.get("/stary-panel")
 def stary_panel():

@@ -1,3 +1,4 @@
+
 {% macro kafelek(etykieta, wartosc, jednostka="") -%}
 <div class="kafelek">
     <span>{{ etykieta }}</span>
@@ -13,4 +14,14 @@
 {% else %}
     <span class="ocena niska">poniżej celu</span>
 {% endif %}
+{%- endmacro %}
+
+{% macro pole(p) -%}
+<div class="pole{% if p.errors %} blad{% endif %}">
+    {{ p.label }}
+    {{ p(**kwargs) }}
+    {% for blad in p.errors %}
+        <p class="komunikat-pola">{{ blad }}</p>
+    {% endfor %}
+</div>
 {%- endmacro %}

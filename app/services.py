@@ -1,12 +1,32 @@
 
 import csv
+import io
 
 _RAPORTY = []
+
+WYMAGANE_KOLUMNY = {"data", "region", "przychod", "koszt"}
 
 
 def wczytaj_zamowienia(sciezka):
     with open(sciezka, newline="", encoding="utf-8") as plik:
         return list(csv.DictReader(plik))
+
+
+def wczytaj_zbior(strumien):
+    try:
+        zawartosc = strumien.read().decode("utf-8")
+    except UnicodeDecodeError as blad:
+        raise ValueError("plik nie jest poprawnym tekstem UTF-8") from blad
+
+    czytnik = csv.DictReader(io.StringIO(zawartosc))
+
+    kolumny = set(czytnik.fieldnames or [])
+    brakujace = sorted(WYMAGANE_KOLUMNY - kolumny)
+
+    if brakujace:
+        raise ValueError(f"brak kolumn: {', '.join(brakujace)}")
+
+    return sum(1 for _ in czytnik)
 
 
 def dostepne_regiony(sciezka):
@@ -15,13 +35,19 @@ def dostepne_regiony(sciezka):
     return sorted(regiony)
 
 
-def policz_wskazniki(sciezka, region=None):
+def policz_wskazniki(sciezka, region=None, rok=None):
     zamowienia = wczytaj_zamowienia(sciezka)
 
     if region is not None:
         zamowienia = [
             zamowienie for zamowienie in zamowienia
             if zamowienie["region"] == region
+        ]
+
+    if rok is not None:
+        zamowienia = [
+            zamowienie for zamowienie in zamowienia
+            if zamowienie["data"].startswith(str(rok))
         ]
 
     przychod = sum(float(z["przychod"]) for z in zamowienia)
@@ -41,8 +67,12 @@ def policz_wskazniki(sciezka, region=None):
     }
 
 
-def zapisz_raport(rok, region):
-    raport = {"rok": rok, "region": region}
+def zapisz_raport(rok, region, uwagi=""):
+    raport = {
+        "rok": rok,
+        "region": region,
+        "uwagi": uwagi,
+    }
     _RAPORTY.append(raport)
     return raport
 
@@ -52,6 +82,11 @@ def raporty_roku(rok):
         raport for raport in _RAPORTY
         if raport["rok"] == rok
     ]
+
+
+def wykaz_raportow():
+    return list(_RAPORTY)
+
 
 def zestawienie_regionow(sciezka):
     return [

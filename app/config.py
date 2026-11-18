@@ -9,6 +9,8 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "")
     SCIEZKA_DANYCH = str(KATALOG / "dane" / "zamowienia.csv")
     DEBUG = False
+    WTF_I18N_ENABLED = False
+    MAX_CONTENT_LENGTH = 1024 * 1024
 
 
 class RozwojowaConfig(Config):

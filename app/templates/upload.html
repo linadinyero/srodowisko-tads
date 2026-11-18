@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "macros.html" import pole %}
+
+{% block tytul %}Wczytaj plik CSV{% endblock %}
+
+{% block tresc %}
+<h1>Wczytaj plik CSV</h1>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {{ formularz.hidden_tag() }}
+    {{ pole(formularz.plik) }}
+    {{ formularz.wczytaj(class="przycisk") }}
+</form>
+{% endblock %}

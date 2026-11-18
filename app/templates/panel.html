@@ -1,13 +1,19 @@
-
 {% extends "base.html" %}
-{% from "macros.html" import kafelek, ocena %}
+{% from "macros.html" import kafelek, ocena, pole %}
 
-{% block tytul %}Wskaźniki: {{ wskazniki.region }}{% endblock %}
-
+{% block tytul %}Wskaźniki: {{ wskazniki.region or "PL" }}{% endblock %}
 {% block tresc %}
-<h1>Wskaźniki: {{ wskazniki.region }}</h1>
+<h1>Wskaźniki: {{ wskazniki.region or "wszystkie regiony" }}</h1>
 
 <p>Stan na dzień {{ dzisiaj | data_pl }}. Regiony w zbiorze: {{ regiony | length }} ({{ regiony | join(", ") }}).</p>
+
+{% if formularz is defined %}
+<form method="get" action="{{ url_for('panel.kpi') }}" class="formularz">
+    {{ pole(formularz.region) }}
+    {{ pole(formularz.rok) }}
+    <button type="submit">Zastosuj</button>
+</form>
+{% endif %}
 
 <div class="kafelki">
     {{ kafelek("Przychody", wskazniki.przychod | zl) }}
@@ -31,7 +37,7 @@
     <tbody>
         {% for w in zestawienie %}
         <tr>
-            <td>{{ w.region }}</td>
+            <td><a href="{{ url_for('panel.region', kod=w.region) }}">{{ w.region }}</a></td>
             <td>{{ w.przychod | zl }}</td>
             <td>{{ w.koszt | zl }}</td>
             <td>{{ w.marza | procent }}</td>

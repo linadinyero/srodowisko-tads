@@ -3,6 +3,7 @@ import time
 from datetime import date
 
 from flask import Flask, jsonify, request, render_template
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.exceptions import HTTPException
 
 from .config import KONFIGURACJE
@@ -11,11 +12,16 @@ from .filters import zarejestruj_filtry
 from .services import dostepne_regiony
 
 
+csrf = CSRFProtect()
+
+
 def create_app(nazwa_konfiguracji="rozwojowa"):
     app = Flask(__name__)
     app.config.from_object(KONFIGURACJE[nazwa_konfiguracji])
     app.logger.setLevel(logging.INFO)
     app.url_map.converters["region"] = RegionConverter
+
+    csrf.init_app(app)
 
     zarejestruj_filtry(app)
 
@@ -29,10 +35,16 @@ def create_app(nazwa_konfiguracji="rozwojowa"):
     @app.before_request
     def rozpocznij_pomiar():
         request.czas_start = time.perf_counter()
-
+    
     @app.after_request
     def dodaj_czas_odpowiedzi(odpowiedz):
-        czas = (time.perf_counter() - request.czas_start) * 1000
+        czas_start = getattr(request, "czas_start", None)
+
+        if czas_start is None:
+            czas = 0
+        else:
+            czas = (time.perf_counter() - czas_start) * 1000
+
         odpowiedz.headers["X-Czas-Ms"] = f"{czas:.2f}"
         return odpowiedz
 
